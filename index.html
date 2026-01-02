@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Untitled</title>
+    
+
+  </head>
+    
+  <body>
+  <!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>超級李唐：萬壑松風大冒險</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #2c2c2c;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+            font-family: "Microsoft JhengHei", sans-serif;
+        }
+        #gameContainer {
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        canvas {
+            background-color: #dcb386; /* 仿古絹本底色 */
+            display: block;
+        }
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #3e2723;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            color: black;
+            padding: 20px;
+            text-align: center;
+            display: none;
+            border: 2px solid #5d4037;
+        }
+    </style>
+</head>
+<body>
+
+<div id="gameContainer">
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="ui">年份：1124 (宣和六年) | 目標：尋找隱藏款識</div>
+    <div id="message">
+        <h2 id="msgTitle">準備好了嗎？</h2>
+        <p id="msgText">使用方向鍵移動，空白鍵跳躍。<br>登上主峰，尋找青綠色下的秘密。</p>
+        <button onclick="startGame()">開始作畫 (Start)</button>
+    </div>
+</div>
+
+<script>
+    // --- 遊戲引擎設置 ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const msgDiv = document.getElementById('message');
+    
+    let animationId;
+    let gameRunning = false;
+    
+    // --- 遊戲參數 ---
+    const gravity = 0.5;
+    const friction = 0.8;
+    const jumpStrength = -12;
+    const moveSpeed = 5;
+    
+    // 玩家物件 (畫院待詔)
+    const player = {
+        x: 50,
+        y: 400,
+        width: 30,
+        height: 40,
+        dx: 0,
+        dy: 0,
+        grounded: false,
+        color: '#d32f2f' // 朱砂紅
+    };
+
+    // 平台數據 (模擬斧劈皴的山石結構)
+    // type: 'rock' (普通), 'pine' (尖刺), 'water' (滑動), 'goal' (款識)
+    const platforms = [
+        { x: 0, y: 550, w: 800, h: 50, type: 'rock', color: '#5d4037' }, // 地面
+        { x: 200, y: 450, w: 100, h: 20, type: 'rock', color: '#3e2723' }, // 小斧劈皴石
+        { x: 400, y: 380, w: 120, h: 20, type: 'water', color: '#81d4fa' }, // 流泉 (滑)
+        { x: 150, y: 300, w: 100, h: 20, type: 'rock', color: '#3e2723' },
+        { x: 50, y: 200, w: 80, h: 20, type: 'rock', color: '#3e2723' },
+        { x: 300, y: 150, w: 150, h: 20, type: 'pine', color: '#2e7d32' }, // 松林 (危險)
+        { x: 600, y: 250, w: 100, h: 20, type: 'rock', color: '#3e2723' },
+        { x: 700, y: 120, w: 80, h: 20, type: 'goal', color: '#ffd700' } // 隱藏款識處
+    ];
+
+    // 輸入控制
+    const keys = {
+        right: false,
+        left: false,
+        up: false
+    };
+
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'ArrowRight') keys.right = true;
+        if (e.code === 'ArrowLeft') keys.left = true;
+        if (e.code === 'Space' || e.code === 'ArrowUp') keys.up = true;
+    });
+
+    document.addEventListener('keyup', (e) => {
+        if (e.code === 'ArrowRight') keys.right = false;
+        if (e.code === 'ArrowLeft') keys.left = false;
+        if (e.code === 'Space' || e.code === 'ArrowUp') keys.up = false;
+    });
+
+    function init() {
+        msgDiv.style.display = 'block';
+    }
+
+    function startGame() {
+        msgDiv.style.display = 'none';
+        resetGame();
+        if (!gameRunning) {
+            gameRunning = true;
+            loop();
+        }
+    }
+
+    function resetGame() {
+        player.x = 50;
+        player.y = 400;
+        player.dx = 0;
+        player.dy = 0;
+    }
+
+    function update() {
+        // 水平移動
+        if (keys.right) player.dx = moveSpeed;
+        else if (keys.left) player.dx = -moveSpeed;
+        else player.dx *= friction;
+
+        // 跳躍
+        if (keys.up && player.grounded) {
+            player.dy = jumpStrength;
+            player.grounded = false;
+        }
+
+        // 物理運算
+        player.dy += gravity;
+        player.x += player.dx;
+        player.y += player.dy;
+
+        // 邊界檢查
+        if (player.x < 0) player.x = 0;
+        if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+        if (player.y > canvas.height) {
+            // 掉下去重來
+            gameOver("你跌入了深邃山谷...", false);
+            return;
+        }
+
+        player.grounded = false;
+
+        // 碰撞檢測
+        platforms.forEach(p => {
+            // 簡單的 AABB 碰撞 (只檢測從上方落下)
+            if (player.x < p.x + p.w &&
+                player.x + player.width > p.x &&
+                player.y + player.height > p.y &&
+                player.y + player.height < p.y + player.dy + 20) {
+                
+                // 松林判定 (受傷)
+                if (p.type === 'pine') {
+                    // 這裡簡化為彈開，或是可以設為死亡
+                    player.dy = -5; 
+                } 
+                // 勝利判定
+                else if (p.type === 'goal') {
+                    gameOver("發現款識！<br>「皇宋宣和甲辰春河陽李唐筆」", true);
+                }
+                // 普通站立
+                else {
+                    player.grounded = true;
+                    player.dy = 0;
+                    player.y = p.y - player.height;
+                    
+                    // 流泉效果 (更滑)
+                    if (p.type === 'water') {
+                        player.dx += 1; // 水流推動
+                    }
+                }
+            }
+        });
+    }
+
+    function draw() {
+        // 清空畫布
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 繪製背景山水意象 (簡單幾何代表)
+        ctx.fillStyle = "rgba(62, 39, 35, 0.1)"; // 淡墨
+        ctx.beginPath();
+        ctx.moveTo(100, 600);
+        ctx.lineTo(300, 100);
+        ctx.lineTo(500, 600);
+        ctx.fill();
+
+        // 繪製平台
+        platforms.forEach(p => {
+            ctx.fillStyle = p.color;
+            
+            if (p.type === 'rock') {
+                // 模擬斧劈皴的硬邊
+                ctx.fillRect(p.x, p.y, p.w, p.h);
+                ctx.strokeStyle = '#1a1a1a';
+                ctx.strokeRect(p.x, p.y, p.w, p.h);
+            } else if (p.type === 'pine') {
+                // 松針意象
+                ctx.fillStyle = p.color;
+                for(let i=0; i<p.w; i+=10) {
+                    ctx.beginPath();
+                    ctx.moveTo(p.x + i, p.y + p.h);
+                    ctx.lineTo(p.x + i + 5, p.y);
+                    ctx.lineTo(p.x + i + 10, p.y + p.h);
+                    ctx.fill();
+                }
+            } else if (p.type === 'water') {
+                 ctx.globalAlpha = 0.6;
+                 ctx.fillRect(p.x, p.y, p.w, p.h);
+                 ctx.globalAlpha = 1.0;
+            } else if (p.type === 'goal') {
+                ctx.fillRect(p.x, p.y, p.w, p.h);
+                ctx.fillStyle = "black";
+                ctx.font = "12px serif";
+                ctx.fillText("李唐筆", p.x + 10, p.y + 15);
+            }
+        });
+
+        // 繪製玩家
+        ctx.fillStyle = player.color;
+        ctx.fillRect(player.x, player.y, player.width, player.height);
+        
+        // 玩家細節 (官帽)
+        ctx.fillStyle = "black";
+        ctx.fillRect(player.x - 5, player.y - 5, player.width + 10, 5);
+        ctx.fillRect(player.x + 5, player.y - 15, 20, 10);
+    }
+
+    function loop() {
+        if (!gameRunning) return;
+        update();
+        draw();
+        animationId = requestAnimationFrame(loop);
+    }
+
+    function gameOver(text, isWin) {
+        gameRunning = false;
+        cancelAnimationFrame(animationId);
+        document.getElementById('msgTitle').innerText = isWin ? "挑戰成功！" : "挑戰失敗";
+        document.getElementById('msgText').innerHTML = text;
+        document.querySelector('#message button').innerText = "重新開始";
+        msgDiv.style.display = 'block';
+    }
+
+    // 初始化
+    init();
+
+</script>
+</body>
+</html>
+    
+  </body>
+  
+</html>
