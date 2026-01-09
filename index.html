@@ -13,272 +13,451 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>超級李唐：萬壑松風大冒險</title>
+    <title>萬壑松風 - 李唐大富翁</title>
     <style>
+        :root {
+            --bg-color: #f4e4bc; /* 仿古紙色 */
+            --board-border: #5c4033;
+            --cell-bg: #e6d0a0;
+            --p1-color: #d93a3a; /* 朱砂紅 */
+            --p2-color: #2c5697; /* 石青色 */
+        }
+
         body {
+            font-family: "Microsoft JhengHei", "KaiTi", serif;
+            background-color: #222;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             margin: 0;
-            background-color: #2c2c2c;
+            padding: 20px;
+            color: #333;
+        }
+
+        h1 {
+            color: #f4e4bc;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px #000;
+        }
+
+        /* 遊戲棋盤佈局 */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(6, 120px);
+            grid-template-rows: repeat(6, 120px);
+            gap: 5px;
+            background-color: var(--board-border);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        /* 中心圖片區域 */
+        .center-image {
+            grid-column: 2 / span 4;
+            grid-row: 2 / span 4;
+            background-color: #111;
+            overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            color: white;
-            font-family: "Microsoft JhengHei", sans-serif;
+            border: 2px solid #8b6914;
         }
-        #gameContainer {
+
+        .center-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.9;
+        }
+
+        /* 格子樣式 */
+        .cell {
+            background-color: var(--cell-bg);
+            border: 1px solid #8b7d6b;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px;
+            text-align: center;
+            font-size: 12px;
             position: relative;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
-        canvas {
-            background-color: #dcb386; /* 仿古絹本底色 */
-            display: block;
-        }
-        #ui {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            color: #3e2723;
+
+        .cell-title {
             font-weight: bold;
-            font-size: 16px;
+            margin-top: 5px;
         }
-        #message {
+
+        .cell-price {
+            font-size: 10px;
+            color: #555;
+        }
+
+        /* 特殊格顏色 */
+        .corner { background-color: #d4b483; }
+        .chance { background-color: #c7d2d6; }
+        .event { background-color: #d6c7c7; }
+
+        /* 玩家棋子 */
+        .player-token {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
             position: absolute;
+            bottom: 5px;
+            border: 2px solid white;
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
+        }
+        
+        .p1-token { background-color: var(--p1-color); left: 10px; }
+        .p2-token { background-color: var(--p2-color); right: 10px; }
+
+        /* 擁有者標記 */
+        .owner-mark {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        /* 控制面板 */
+        .controls {
+            margin-top: 20px;
+            background-color: var(--bg-color);
+            padding: 20px;
+            border-radius: 8px;
+            width: 720px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-box {
+            width: 45%;
+        }
+
+        .player-info {
+            padding: 5px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+
+        .p1-info { border-left: 5px solid var(--p1-color); background: rgba(217, 58, 58, 0.1); }
+        .p2-info { border-left: 5px solid var(--p2-color); background: rgba(44, 86, 151, 0.1); }
+
+        button {
+            background-color: #8b4513;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-family: "KaiTi", serif;
+        }
+
+        button:hover { background-color: #a0522d; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+        #log {
+            width: 100%;
+            height: 100px;
+            overflow-y: scroll;
+            background: #fff;
+            border: 1px solid #ccc;
+            margin-top: 10px;
+            padding: 5px;
+            font-size: 13px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(255, 255, 255, 0.9);
-            color: black;
+            background: white;
             padding: 20px;
+            border: 3px solid #5c4033;
+            z-index: 100;
             text-align: center;
-            display: none;
-            border: 2px solid #5d4037;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
         }
     </style>
 </head>
 <body>
 
-<div id="gameContainer">
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
-    <div id="ui">年份：1124 (宣和六年) | 目標：尋找隱藏款識</div>
-    <div id="message">
-        <h2 id="msgTitle">準備好了嗎？</h2>
-        <p id="msgText">使用方向鍵移動，空白鍵跳躍。<br>登上主峰，尋找青綠色下的秘密。</p>
-        <button onclick="startGame()">開始作畫 (Start)</button>
+    <h1>萬壑松風・畫院爭霸</h1>
+
+    <div class="board" id="gameBoard">
+        <!-- 中心圖片 (李唐作品) -->
+        <div class="center-image">
+            <img src="https://digitalarchive.npm.gov.tw/html/att/00/00/09/27/0000092708/17006830_500.jpg" alt="李唐-萬壑松風圖">
+        </div>
+        
+        <!-- JS 將生成格子 -->
     </div>
-</div>
+
+    <div class="controls">
+        <div class="status-box">
+            <div class="player-info p1-info">
+                <strong>玩家一 (朱砂)</strong><br>
+                靈感: <span id="p1-money">1000</span> | 位置: <span id="p1-pos">起點</span>
+            </div>
+            <div class="player-info p2-info">
+                <strong>玩家二 (石青)</strong><br>
+                靈感: <span id="p2-money">1000</span> | 位置: <span id="p2-pos">起點</span>
+            </div>
+        </div>
+        
+        <div style="text-align: center;">
+            <div id="dice-display" style="font-size: 24px; margin-bottom: 10px;">🎲 準備開始</div>
+            <button id="rollBtn" onclick="playTurn()">擲骰子</button>
+        </div>
+    </div>
+
+    <div id="log">歡迎來到宋代畫院！遊戲開始，玩家一先攻。</div>
+
+    <div id="messageModal" class="modal">
+        <h3 id="modalTitle">標題</h3>
+        <p id="modalMsg">內容</p>
+        <button onclick="closeModal()">確定</button>
+    </div>
 
 <script>
-    // --- 遊戲引擎設置 ---
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const msgDiv = document.getElementById('message');
-    
-    let animationId;
-    let gameRunning = false;
-    
-    // --- 遊戲參數 ---
-    const gravity = 0.5;
-    const friction = 0.8;
-    const jumpStrength = -12;
-    const moveSpeed = 5;
-    
-    // 玩家物件 (畫院待詔)
-    const player = {
-        x: 50,
-        y: 400,
-        width: 30,
-        height: 40,
-        dx: 0,
-        dy: 0,
-        grounded: false,
-        color: '#d32f2f' // 朱砂紅
-    };
-
-    // 平台數據 (模擬斧劈皴的山石結構)
-    // type: 'rock' (普通), 'pine' (尖刺), 'water' (滑動), 'goal' (款識)
-    const platforms = [
-        { x: 0, y: 550, w: 800, h: 50, type: 'rock', color: '#5d4037' }, // 地面
-        { x: 200, y: 450, w: 100, h: 20, type: 'rock', color: '#3e2723' }, // 小斧劈皴石
-        { x: 400, y: 380, w: 120, h: 20, type: 'water', color: '#81d4fa' }, // 流泉 (滑)
-        { x: 150, y: 300, w: 100, h: 20, type: 'rock', color: '#3e2723' },
-        { x: 50, y: 200, w: 80, h: 20, type: 'rock', color: '#3e2723' },
-        { x: 300, y: 150, w: 150, h: 20, type: 'pine', color: '#2e7d32' }, // 松林 (危險)
-        { x: 600, y: 250, w: 100, h: 20, type: 'rock', color: '#3e2723' },
-        { x: 700, y: 120, w: 80, h: 20, type: 'goal', color: '#ffd700' } // 隱藏款識處
+    // 遊戲數據配置 (基於李唐生平與畫作)
+    const cellsData = [
+        { name: "起點(河陽)", type: "start", price: 0, rent: 0, desc: "領取盤纏" }, // 0
+        { name: "墨韻堂", type: "prop", price: 60, rent: 10, desc: "基礎畫具店" }, // 1
+        { name: "宣和畫院", type: "chance", price: 0, rent: 0, desc: "徽宗賞識？" }, // 2
+        { name: "青綠染坊", type: "prop", price: 100, rent: 20, desc: "石青石綠顏料" }, // 3
+        { name: "深山松林", type: "prop", price: 120, rent: 25, desc: "寫生靈感地" }, // 4
+        { name: "靖康之難", type: "event", price: 0, rent: 0, desc: "暫停或罰款" }, // 5
+        { name: "斧劈皴法", type: "prop", price: 150, rent: 35, desc: "獨門筆法" }, // 6
+        { name: "深山古寺", type: "parking", price: 0, rent: 0, desc: "靜心修養" }, // 7
+        { name: "紹興畫院", type: "prop", price: 180, rent: 45, desc: "南宋畫院待詔" }, // 8
+        { name: "御賜金帶", type: "prop", price: 220, rent: 55, desc: "最高榮譽" }, // 9
+        { name: "尋找隱款", type: "chance", price: 0, rent: 0, desc: "發現1124年款" }, // 10
+        { name: "萬壑流泉", type: "prop", price: 250, rent: 65, desc: "畫中絕景" }, // 11
+        { name: "主峰(壯碩)", type: "prop", price: 280, rent: 75, desc: "氣勢撼動" }, // 12
+        { name: "近景松林", type: "prop", price: 300, rent: 85, desc: "空間深遠" }, // 13
+        { name: "枯思崖", type: "jail", price: 0, rent: 0, desc: "靈感枯竭" }, // 14
+        { name: "復古畫風", type: "prop", price: 200, rent: 50, desc: "追摹范寬" }, // 15
+        { name: "蕭寺圖", type: "prop", price: 180, rent: 40, desc: "李唐早期作品" }, // 16
+        { name: "採薇圖", type: "prop", price: 160, rent: 35, desc: "南宋人物畫" }, // 17
+        { name: "渡江", type: "event", price: 0, rent: 0, desc: "從北至南" }, // 18
+        { name: "觀瀑", type: "prop", price: 140, rent: 30, desc: "聽泉觀瀑" } // 19
     ];
 
-    // 輸入控制
-    const keys = {
-        right: false,
-        left: false,
-        up: false
-    };
+    // 映射索引到 6x6 網格的座標 (順時針繞行)
+    // 0(1,1) -> 1(1,2) -> 2(1,3) -> 3(1,4) -> 4(1,5) -> 5(1,6)
+    // 19(2,1)                                            6(2,6)
+    // 18(3,1)         (中心圖片佔據 2-5行, 2-5列)        7(3,6)
+    // 17(4,1)                                            8(4,6)
+    // 16(5,1)                                            9(5,6)
+    // 15(6,1) -> 14(6,2) -> 13(6,3) -> 12(6,4) -> 11(6,5) -> 10(6,6)
+    
+    // 修正的格位映射 (Grid Row/Col)
+    const cellPositions = [
+        {r:1, c:1}, {r:1, c:2}, {r:1, c:3}, {r:1, c:4}, {r:1, c:5}, {r:1, c:6},
+        {r:2, c:6}, {r:3, c:6}, {r:4, c:6}, {r:5, c:6},
+        {r:6, c:6}, {r:6, c:5}, {r:6, c:4}, {r:6, c:3}, {r:6, c:2}, {r:6, c:1},
+        {r:5, c:1}, {r:4, c:1}, {r:3, c:1}, {r:2, c:1}
+    ];
 
-    document.addEventListener('keydown', (e) => {
-        if (e.code === 'ArrowRight') keys.right = true;
-        if (e.code === 'ArrowLeft') keys.left = true;
-        if (e.code === 'Space' || e.code === 'ArrowUp') keys.up = true;
-    });
+    let players = [
+        { id: 1, name: "玩家一", color: "#d93a3a", money: 1000, pos: 0, jail: 0, active: true },
+        { id: 2, name: "玩家二", color: "#2c5697", money: 1000, pos: 0, jail: 0, active: true }
+    ];
+    let currentPlayerIdx = 0;
+    let ownership = new Array(20).fill(0); // 0=無, 1=P1, 2=P2
 
-    document.addEventListener('keyup', (e) => {
-        if (e.code === 'ArrowRight') keys.right = false;
-        if (e.code === 'ArrowLeft') keys.left = false;
-        if (e.code === 'Space' || e.code === 'ArrowUp') keys.up = false;
-    });
+    function initBoard() {
+        const board = document.getElementById('gameBoard');
+        cellsData.forEach((data, index) => {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            const pos = cellPositions[index];
+            cell.style.gridRow = pos.r;
+            cell.style.gridColumn = pos.c;
+            
+            // 根據類型加顏色
+            if (data.type === 'start' || data.type === 'jail' || data.type === 'parking') cell.classList.add('corner');
+            if (data.type === 'chance') cell.classList.add('chance');
+            if (data.type === 'event') cell.classList.add('event');
 
-    function init() {
-        msgDiv.style.display = 'block';
+            let content = `<div class="cell-title">${data.name}</div>`;
+            if (data.type === 'prop') {
+                content += `<div class="cell-price">💰${data.price}</div>`;
+            } else {
+                content += `<div class="cell-price" style="font-size:9px">${data.desc}</div>`;
+            }
+            // 擁有者標記
+            content += `<div id="owner-${index}" class="owner-mark"></div>`;
+            
+            cell.innerHTML = content;
+            board.appendChild(cell);
+        });
+        updateTokens();
     }
 
-    function startGame() {
-        msgDiv.style.display = 'none';
-        resetGame();
-        if (!gameRunning) {
-            gameRunning = true;
-            loop();
-        }
+    function updateTokens() {
+        // 清除舊棋子
+        document.querySelectorAll('.player-token').forEach(e => e.remove());
+        
+        players.forEach(p => {
+            const posData = cellPositions[p.pos];
+            const cellIndex = p.pos;
+            // 找到對應的 cell DOM (簡單起見，重新計算 selector 或 append 到對應 grid 位置)
+            // 這裡直接絕對定位到 board 上比較麻煩，不如 append 到 cell 裡
+            
+            // 找到該位置的 cell 元素 (它是第 index+2 個 child，因為 image 是第一個)
+            // 為了準確，我們重新遍歷
+            const board = document.getElementById('gameBoard');
+            const cells = board.querySelectorAll('.cell');
+            // cells 順序是按 DOM 生成順序，剛好對應 index 0-19
+            const targetCell = cells[cellIndex];
+            
+            const token = document.createElement('div');
+            token.className = `player-token p${p.id}-token`;
+            targetCell.appendChild(token);
+        });
     }
 
-    function resetGame() {
-        player.x = 50;
-        player.y = 400;
-        player.dx = 0;
-        player.dy = 0;
+    function log(msg) {
+        const div = document.getElementById('log');
+        div.innerHTML = `> ${msg}<br>` + div.innerHTML;
     }
 
-    function update() {
-        // 水平移動
-        if (keys.right) player.dx = moveSpeed;
-        else if (keys.left) player.dx = -moveSpeed;
-        else player.dx *= friction;
+    function showModal(title, msg) {
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('modalMsg').innerText = msg;
+        document.getElementById('messageModal').style.display = 'block';
+    }
 
-        // 跳躍
-        if (keys.up && player.grounded) {
-            player.dy = jumpStrength;
-            player.grounded = false;
-        }
+    function closeModal() {
+        document.getElementById('messageModal').style.display = 'none';
+        checkWinCondition();
+    }
 
-        // 物理運算
-        player.dy += gravity;
-        player.x += player.dx;
-        player.y += player.dy;
-
-        // 邊界檢查
-        if (player.x < 0) player.x = 0;
-        if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
-        if (player.y > canvas.height) {
-            // 掉下去重來
-            gameOver("你跌入了深邃山谷...", false);
+    function playTurn() {
+        const btn = document.getElementById('rollBtn');
+        btn.disabled = true;
+        
+        const p = players[currentPlayerIdx];
+        
+        // 檢查坐牢
+        if (p.jail > 0) {
+            log(`${p.name} 靈感枯竭，休息中 (還剩 ${p.jail} 回合)`);
+            p.jail--;
+            endTurn();
             return;
         }
 
-        player.grounded = false;
-
-        // 碰撞檢測
-        platforms.forEach(p => {
-            // 簡單的 AABB 碰撞 (只檢測從上方落下)
-            if (player.x < p.x + p.w &&
-                player.x + player.width > p.x &&
-                player.y + player.height > p.y &&
-                player.y + player.height < p.y + player.dy + 20) {
-                
-                // 松林判定 (受傷)
-                if (p.type === 'pine') {
-                    // 這裡簡化為彈開，或是可以設為死亡
-                    player.dy = -5; 
-                } 
-                // 勝利判定
-                else if (p.type === 'goal') {
-                    gameOver("發現款識！<br>「皇宋宣和甲辰春河陽李唐筆」", true);
-                }
-                // 普通站立
-                else {
-                    player.grounded = true;
-                    player.dy = 0;
-                    player.y = p.y - player.height;
-                    
-                    // 流泉效果 (更滑)
-                    if (p.type === 'water') {
-                        player.dx += 1; // 水流推動
-                    }
-                }
-            }
-        });
-    }
-
-    function draw() {
-        // 清空畫布
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // 繪製背景山水意象 (簡單幾何代表)
-        ctx.fillStyle = "rgba(62, 39, 35, 0.1)"; // 淡墨
-        ctx.beginPath();
-        ctx.moveTo(100, 600);
-        ctx.lineTo(300, 100);
-        ctx.lineTo(500, 600);
-        ctx.fill();
-
-        // 繪製平台
-        platforms.forEach(p => {
-            ctx.fillStyle = p.color;
-            
-            if (p.type === 'rock') {
-                // 模擬斧劈皴的硬邊
-                ctx.fillRect(p.x, p.y, p.w, p.h);
-                ctx.strokeStyle = '#1a1a1a';
-                ctx.strokeRect(p.x, p.y, p.w, p.h);
-            } else if (p.type === 'pine') {
-                // 松針意象
-                ctx.fillStyle = p.color;
-                for(let i=0; i<p.w; i+=10) {
-                    ctx.beginPath();
-                    ctx.moveTo(p.x + i, p.y + p.h);
-                    ctx.lineTo(p.x + i + 5, p.y);
-                    ctx.lineTo(p.x + i + 10, p.y + p.h);
-                    ctx.fill();
-                }
-            } else if (p.type === 'water') {
-                 ctx.globalAlpha = 0.6;
-                 ctx.fillRect(p.x, p.y, p.w, p.h);
-                 ctx.globalAlpha = 1.0;
-            } else if (p.type === 'goal') {
-                ctx.fillRect(p.x, p.y, p.w, p.h);
-                ctx.fillStyle = "black";
-                ctx.font = "12px serif";
-                ctx.fillText("李唐筆", p.x + 10, p.y + 15);
-            }
-        });
-
-        // 繪製玩家
-        ctx.fillStyle = player.color;
-        ctx.fillRect(player.x, player.y, player.width, player.height);
+        const roll = Math.floor(Math.random() * 6) + 1;
+        document.getElementById('dice-display').innerText = `🎲 ${p.name} 擲出了 ${roll}`;
         
-        // 玩家細節 (官帽)
-        ctx.fillStyle = "black";
-        ctx.fillRect(player.x - 5, player.y - 5, player.width + 10, 5);
-        ctx.fillRect(player.x + 5, player.y - 15, 20, 10);
+        // 移動
+        let oldPos = p.pos;
+        p.pos = (p.pos + roll) % 20;
+        
+        // 過起點獎勵
+        if (p.pos < oldPos) {
+            log(`${p.name} 經過河陽老家，獲得盤纏 200 靈感`);
+            p.money += 200;
+        }
+
+        updateTokens();
+        handleCell(p);
+        updateUI();
     }
 
-    function loop() {
-        if (!gameRunning) return;
-        update();
-        draw();
-        animationId = requestAnimationFrame(loop);
+    function handleCell(p) {
+        const cell = cellsData[p.pos];
+        const idx = p.pos;
+
+        if (cell.type === 'prop') {
+            const owner = ownership[idx];
+            if (owner === 0) {
+                // 無人擁有，購買？
+                if (p.money >= cell.price) {
+                    // 簡化：自動購買或彈窗。這裡用自動購買如果錢夠多，或是50%機率購買
+                    // 為了互動性，這裡強制購買如果買得起
+                    if(confirm(`${p.name} 到達 ${cell.name}。\n價格: ${cell.price}\n你要購買並獲取靈感來源嗎？`)) {
+                        p.money -= cell.price;
+                        ownership[idx] = p.id;
+                        document.getElementById(`owner-${idx}`).style.backgroundColor = p.color;
+                        log(`${p.name} 花費 ${cell.price} 購買了 ${cell.name}`);
+                    }
+                } else {
+                    log(`${p.name} 靈感不足，無法購買 ${cell.name}`);
+                }
+            } else if (owner !== p.id) {
+                // 支付過路費
+                log(`${p.name} 進入對手地盤 ${cell.name}，支付過路費 ${cell.rent}`);
+                p.money -= cell.rent;
+                players[owner-1].money += cell.rent;
+            }
+        } else if (cell.type === 'chance') {
+            const luck = Math.random();
+            if (luck > 0.5) {
+                log(`${p.name} 在 ${cell.name} 獲得意外靈感！(+100)`);
+                p.money += 100;
+            } else {
+                log(`${p.name} 在 ${cell.name} 毫無收穫。`);
+            }
+        } else if (cell.type === 'event') {
+             if (cell.name === "靖康之難") {
+                 log(`${p.name} 遭遇靖康之難，逃往南方，損失 100 靈感。`);
+                 p.money -= 100;
+             } else if (cell.name === "渡江") {
+                 log("渡江至杭州，安全抵達。");
+             }
+        } else if (cell.type === 'jail') {
+            log(`${p.name} 進入枯思崖，暫停 1 回合。`);
+            p.jail = 1;
+        } else if (cell.type === 'start') {
+            // 已在移動邏輯處理
+        }
+        
+        setTimeout(endTurn, 500); // 稍作延遲
     }
 
-    function gameOver(text, isWin) {
-        gameRunning = false;
-        cancelAnimationFrame(animationId);
-        document.getElementById('msgTitle').innerText = isWin ? "挑戰成功！" : "挑戰失敗";
-        document.getElementById('msgText').innerHTML = text;
-        document.querySelector('#message button').innerText = "重新開始";
-        msgDiv.style.display = 'block';
+    function updateUI() {
+        document.getElementById('p1-money').innerText = players[0].money;
+        document.getElementById('p2-money').innerText = players[1].money;
+        document.getElementById('p1-pos').innerText = cellsData[players[0].pos].name;
+        document.getElementById('p2-pos').innerText = cellsData[players[1].pos].name;
     }
 
-    // 初始化
-    init();
+    function endTurn() {
+        checkWinCondition();
+        currentPlayerIdx = (currentPlayerIdx + 1) % 2;
+        document.getElementById('rollBtn').innerText = `輪到 ${players[currentPlayerIdx].name} (擲骰子)`;
+        document.getElementById('rollBtn').disabled = false;
+        document.getElementById('rollBtn').style.backgroundColor = players[currentPlayerIdx].color;
+    }
 
+    function checkWinCondition() {
+        if (players[0].money < 0) {
+            alert("玩家一靈感枯竭！玩家二獲勝！一代宗師誕生！");
+            location.reload();
+        } else if (players[1].money < 0) {
+            alert("玩家二靈感枯竭！玩家一獲勝！一代宗師誕生！");
+            location.reload();
+        }
+    }
+
+    // 啟動
+    initBoard();
 </script>
+
 </body>
 </html>
     
